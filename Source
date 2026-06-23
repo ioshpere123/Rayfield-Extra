@@ -1,4 +1,4 @@
-print("Version 0.1")
+print("Version 0.02")
 --[[
     Rayfield Extra Mod
 
@@ -808,8 +808,6 @@ do
 		local ok, err = pcall(function()
 			ensureFolder(RayfieldFolder)
 			ensureFolder(AssetPath)
-
-            if isfile and isfile
 
 			-- skip ids we've already tried so a dead asset can't loop the loader forever
 			local attempted = {}
