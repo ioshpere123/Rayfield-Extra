@@ -1,4 +1,3 @@
-print("Version 0.02")
 --[[
     Rayfield Extra Mod
 
@@ -1813,7 +1812,7 @@ function RayfieldLibrary:CreateWindow(Settings)
         CustomSettingsFile = callSafely(writefile, ConfigurationFolder .. "/" .. "CustomSettings" .. ConfigurationExtension, tostring(HttpService:JSONEncode(Data)))
     end
 
-    local ThemeMode = string.lower(Settings.ConfigurationSaving.ThemeMode)
+    local ThemeMode = string.lower(Settings.ConfigurationSaving.ThemeMode) or nil
 
     if ThemeMode ~= nil or ThemeMode ~= false then
         if ThemeMode == "global" then
