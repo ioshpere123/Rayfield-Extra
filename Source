@@ -1,4 +1,4 @@
-print("Version beta {Save config}")
+print("Version beta {Save config} Fix")
 
 --[[
     Rayfield Extra Mod
@@ -1175,6 +1175,8 @@ local function SaveConfiguration(configName)
     if MultiConfigs then
         CFileName = configName
     end
+
+	print(configName, CFileName, "Name Check")
 
 	if debugX then
 		print('Saving')
@@ -3936,6 +3938,7 @@ end
 
 function RayfieldLibrary:SaveConfiguration(configName)
 
+	print("RayfieldLibrary Function Called ", configName)
 	if debugX then
 		warn('Saving Configuration')
 	end
