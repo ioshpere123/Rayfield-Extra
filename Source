@@ -1,4 +1,4 @@
-print("Version beta {Save config} Fix")
+print("Version beta {Save config} 1")
 
 --[[
     Rayfield Extra Mod
@@ -1170,6 +1170,7 @@ local function LoadConfiguration(Configuration)
 end
 
 local function SaveConfiguration(configName)
+	print(CEnabled, globalLoaded)
 	if not CEnabled or not globalLoaded then return end
 
     if MultiConfigs then
