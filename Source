@@ -1,4 +1,4 @@
-print("Version 0.03")
+print("Version 1.1020")
 --[[
     Rayfield Extra Mod
 
@@ -924,6 +924,7 @@ local Icons = useStudio and require(script.Parent.icons) or loadWithTimeout('htt
 local AutoLoadConfig = true
 local MultiConfigs = false
 local GlobalTheme = false
+local ThemeMode = nil
 
 local CFileName = nil
 local CEnabled = false
@@ -1813,7 +1814,9 @@ function RayfieldLibrary:CreateWindow(Settings)
         CustomSettingsFile = callSafely(writefile, ConfigurationFolder .. "/" .. "CustomSettings" .. ConfigurationExtension, tostring(HttpService:JSONEncode(Data)))
     end
 
-    local ThemeMode = string.lower(Settings.ConfigurationSaving.ThemeMode) or nil
+	if Settings.ConfigurationSaving.ThemeMode then
+    	ThemeMode = string.lower(Settings.ConfigurationSaving.ThemeMode)
+	end
 
     if ThemeMode ~= nil or ThemeMode ~= false then
         if ThemeMode == "global" then
