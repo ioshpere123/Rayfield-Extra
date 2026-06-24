@@ -1,10 +1,11 @@
-print("Version beta {Save config} 1")
+print("Version beta")
 
 --[[
-    Rayfield Extra Mod
+	Rayfield Plus+
+	by randomuser._.
+]]
 
-    made by randomuser._.
-
+--[[
 	Rayfield Interface Suite
 	by Sirius
 
@@ -924,7 +925,7 @@ local Icons = useStudio and require(script.Parent.icons) or loadWithTimeout('htt
 
 local AutoLoadConfig = true
 local MultiConfigs = false
-local GlobalTheme = false
+local CurrentTheme = false
 local ThemeMode = nil
 
 local CFileName = nil
@@ -940,6 +941,7 @@ local SelectedTheme = RayfieldLibrary.Theme.Default
 
 local function ChangeTheme(Theme)
 	if typeof(Theme) == 'string' then
+		CurrentTheme =  Theme
 		SelectedTheme = RayfieldLibrary.Theme[Theme]
 	elseif typeof(Theme) == 'table' then
 		SelectedTheme = Theme
@@ -1166,18 +1168,23 @@ local function LoadConfiguration(Configuration)
 		end
 	end
 
+	if ThemeMode == "pconfig" then
+		if Data["Theme"] and Data["Theme"] ~= nil then
+			if type(Data["Theme"]) == "string" then
+				ChangeTheme(Data["Theme"])
+			end
+		end
+	end
+
 	return changed
 end
 
 local function SaveConfiguration(configName)
-	print(CEnabled, globalLoaded)
-	if not CEnabled or not globalLoaded then return end
+	if not CEnabled then return end
 
     if MultiConfigs then
         CFileName = configName
     end
-
-	print(configName, CFileName, "Name Check")
 
 	if debugX then
 		print('Saving')
@@ -1198,6 +1205,10 @@ local function SaveConfiguration(configName)
 				Data[i] = v.CurrentValue or v.CurrentKeybind or v.CurrentOption or v.Color
 			end
 		end
+	end
+
+	if MultiConfigs and CurrentTheme then
+		Data["Theme"] = CurrentTheme
 	end
 
 	if useStudio then
@@ -1810,29 +1821,46 @@ function RayfieldLibrary:CreateWindow(Settings)
 
     local CustomSettingsFile
 
-    if callSafely(isfile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension) then
-        CustomSettingsFile = callSafely(readfile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension)
-    else
+    if not callSafely(isfile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension) then
         local Data = {}
         Data["Theme"] = Settings.Theme
-        CustomSettingsFile = callSafely(writefile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension, tostring(HttpService:JSONEncode(Data)))
+        callSafely(writefile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension, tostring(HttpService:JSONEncode(Data)))
     end
 
 	if Settings.ConfigurationSaving.ThemeMode then
     	ThemeMode = string.lower(Settings.ConfigurationSaving.ThemeMode)
 	end
 
-    if ThemeMode ~= nil or ThemeMode ~= false then
-        if ThemeMode == "global" then
-            Settings.Theme = CustomSettingsFile["Theme"] or "Default"
-        elseif ThemeMode == "pconfig" and CustomSettingsFile["AutoExecute"] then
-            local fileName = CustomSettingsFile["AutoExecute"]
-            print(ConfigurationFolder[fileName])
-            Settings.Theme = ConfigurationFolder[fileName]["Theme"]
-        end
+    if ThemeMode ~= nil and ThemeMode ~= false then
+
+		CustomSettingsFile = callSafely(readfile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension)
+		local success, Data = pcall(function() return HttpService:JSONDecode(CustomSettingsFile) end)
+
+		if success then
+
+			--print(ThemeMode)
+
+			if ThemeMode == "global" then
+
+				--print("Custom Theme", Data["Theme"])
+
+				Settings.Theme = Data["Theme"] or "Default"
+
+			elseif ThemeMode == "pconfig" and Data["AutoExecute"] then
+
+				local fileName = Data["AutoExecute"]
+
+				--print(ConfigurationFolder[fileName])
+				
+				Settings.Theme = ConfigurationFolder[fileName]["Theme"]
+			end
+		else
+			warn("CustomSettingsFile had an issue decoding theme")
+		end
     end
 
 	if Settings.Theme then
+		--print("Loading theme", Settings.Theme)
 		local success, result = pcall(ChangeTheme, Settings.Theme)
 		if not success then
 			local success, result2 = pcall(ChangeTheme, 'Default')
@@ -2256,7 +2284,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					TweenService:Create(Button.ElementIndicator, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {TextTransparency = 0.9}):Play()
 					TweenService:Create(Button.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
 				else
-					if not ButtonSettings.Ext then
+					if not ButtonSettings.Ext and not MultiConfigs then
 						SaveConfiguration(ButtonSettings.Name..'\n')
 					end
 					TweenService:Create(Button, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackgroundHover}):Play()
@@ -2422,7 +2450,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 				pcall(function()ColorPickerSettings.Callback(Color3.fromHSV(h,s,v))end)
 				local r,g,b = math.floor((h*255)+0.5),math.floor((s*255)+0.5),math.floor((v*255)+0.5)
 				ColorPickerSettings.Color = Color3.fromRGB(r,g,b)
-				if not ColorPickerSettings.Ext then
+				if not ColorPickerSettings.Ext and not MultiConfigs then
 					SaveConfiguration()
 				end
 			end)
@@ -2443,7 +2471,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 				end
 				local r,g,b = math.floor((h*255)+0.5),math.floor((s*255)+0.5),math.floor((v*255)+0.5)
 				ColorPickerSettings.Color = Color3.fromRGB(r,g,b)
-				if not ColorPickerSettings.Ext then
+				if not ColorPickerSettings.Ext and not MultiConfigs then
 					SaveConfiguration(ColorPickerSettings.Flag..'\n'..tostring(ColorPickerSettings.Color))
 				end
 			end
@@ -2478,7 +2506,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					ColorPicker.HexInput.InputBox.Text = string.format("#%02X%02X%02X",color.R*0xFF,color.G*0xFF,color.B*0xFF)
 					pcall(function()ColorPickerSettings.Callback(Color3.fromHSV(h,s,v))end)
 					ColorPickerSettings.Color = Color3.fromRGB(r,g,b)
-					if not ColorPickerSettings.Ext then
+					if not ColorPickerSettings.Ext and not MultiConfigs then
 						SaveConfiguration()
 					end
 				end
@@ -2498,7 +2526,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					ColorPicker.HexInput.InputBox.Text = string.format("#%02X%02X%02X",color.R*0xFF,color.G*0xFF,color.B*0xFF)
 					pcall(function()ColorPickerSettings.Callback(Color3.fromHSV(h,s,v))end)
 					ColorPickerSettings.Color = Color3.fromRGB(r,g,b)
-					if not ColorPickerSettings.Ext then
+					if not ColorPickerSettings.Ext and not MultiConfigs then
 						SaveConfiguration()
 					end
 				end
@@ -2747,7 +2775,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					Input.InputFrame.InputBox.Text = ""
 				end
 
-				if not InputSettings.Ext then
+				if not InputSettings.Ext and not MultiConfigs then
 					SaveConfiguration()
 				end
 			end)
@@ -2772,7 +2800,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					InputSettings.Callback(text)
 				end)
 
-				if not InputSettings.Ext then
+				if not InputSettings.Ext and not MultiConfigs then
 					SaveConfiguration()
 				end
 			end
@@ -3004,7 +3032,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 							Dropdown.List.Visible = false
 						end
 						Debounce = false
-						if not DropdownSettings.Ext then
+						if not DropdownSettings.Ext and not MultiConfigs then
 							SaveConfiguration()
 						end
 					end)
@@ -3164,7 +3192,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 				CheckingForKey = false
 				if Keybind.KeybindFrame.KeybindBox.Text == nil or Keybind.KeybindFrame.KeybindBox.Text == "" then
 					Keybind.KeybindFrame.KeybindBox.Text = KeybindSettings.CurrentKeybind
-					if not KeybindSettings.Ext then
+					if not KeybindSettings.Ext and not MultiConfigs then
 						SaveConfiguration()
 					end
 				end
@@ -3186,7 +3214,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 						Keybind.KeybindFrame.KeybindBox.Text = tostring(NewKeyNoEnum)
 						KeybindSettings.CurrentKeybind = tostring(NewKeyNoEnum)
 						Keybind.KeybindFrame.KeybindBox:ReleaseFocus()
-						if not KeybindSettings.Ext then
+						if not KeybindSettings.Ext and not MultiConfigs then
 							SaveConfiguration()
 						end
 
@@ -3242,7 +3270,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 				Keybind.KeybindFrame.KeybindBox.Text = tostring(NewKeybind)
 				KeybindSettings.CurrentKeybind = tostring(NewKeybind)
 				Keybind.KeybindFrame.KeybindBox:ReleaseFocus()
-				if not KeybindSettings.Ext then
+				if not KeybindSettings.Ext and not MultiConfigs then
 					SaveConfiguration()
 				end
 
@@ -3349,7 +3377,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					TweenService:Create(Toggle.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
 				end
 
-				if not ToggleSettings.Ext then
+				if not ToggleSettings.Ext and not MultiConfigs then
 					SaveConfiguration()
 				end
 			end)
@@ -3399,7 +3427,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					TweenService:Create(Toggle.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
 				end
 
-				if not ToggleSettings.Ext then
+				if not ToggleSettings.Ext and not MultiConfigs then
 					SaveConfiguration()
 				end
 			end
@@ -3549,7 +3577,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 							end
 
 							SliderSettings.CurrentValue = NewValue
-							if not SliderSettings.Ext then
+							if not SliderSettings.Ext and not MultiConfigs then
 								SaveConfiguration()
 							end
 						end
@@ -3583,7 +3611,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 				end
 
 				SliderSettings.CurrentValue = NewVal
-				if not SliderSettings.Ext then
+				if not SliderSettings.Ext and not MultiConfigs then
 					SaveConfiguration()
 				end
 			end
@@ -3926,7 +3954,7 @@ function RayfieldLibrary:LoadConfiguration(configName)
 			end
 		end)
 
-		if success and loaded and not notified then
+		if success and loaded and not notified and not MultiConfigs then
 			RayfieldLibrary:Notify({Title = "Rayfield Configurations", Content = "The configuration file for this script has been loaded from a previous session.", Image = 4384403532})
 		elseif not success and not notified then
 			warn('Rayfield Configurations Error | '..tostring(result))
@@ -3939,7 +3967,6 @@ end
 
 function RayfieldLibrary:SaveConfiguration(configName)
 
-	print("RayfieldLibrary Function Called ", configName)
 	if debugX then
 		warn('Saving Configuration')
 	end
@@ -3948,6 +3975,13 @@ function RayfieldLibrary:SaveConfiguration(configName)
 		SaveConfiguration(configName)
 	end
 
+end
+
+function RayfieldLibrary:SetGlobalTheme(theme)
+	ensureFolder(RayfieldFolder)
+	local Data = {}
+    Data["Theme"] = theme
+    CustomSettingsFile = callSafely(writefile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension, tostring(HttpService:JSONEncode(Data)))
 end
 
 if CEnabled and Main:FindFirstChild('Notice') then
