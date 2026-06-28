@@ -4007,6 +4007,32 @@ function RayfieldLibrary:SetAutoExecute(config)
 	end
 end
 
+function RayfieldLibrary:ClearAutoExecute()
+
+	local Data = nil
+
+	local success, result = pcall(function()
+		if isfile then
+			if callSafely(isfile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension) then
+				local file = callSafely(readfile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension)
+				decoded, decodedFile = pcall(function() return HttpService:JSONDecode(file) end)
+				if decoded then
+					Data = decodedFile
+				end
+			end
+		else
+			RayfieldLibrary:Notify({Title = "Rayfield Configurations", Content = "We couldn't enable Configuration Saving as you are not using software with filesystem support.", Image = 4384402990})
+		end
+	end)
+
+	if success and Data then
+		Data["AutoExecute"] = nil
+		callSafely(writefile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension, tostring(HttpService:JSONEncode(Data)))
+	elseif not success then
+		warn('Rayfield Custom Configurations Error | '..tostring(result))
+	end
+end
+
 function RayfieldLibrary:SetGlobalTheme(theme)
 
 	ensureFolder(RayfieldFolder)
