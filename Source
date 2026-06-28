@@ -1,4 +1,4 @@
-print("Version beta")
+--print("Version beta")
 
 --[[
 	Rayfield Plus+
@@ -924,6 +924,7 @@ local Icons = useStudio and require(script.Parent.icons) or loadWithTimeout('htt
 -- Variables
 
 local AutoLoadConfig = true
+local AutoExecuteFile = nil
 local MultiConfigs = false
 local CurrentTheme = false
 local ThemeMode = nil
@@ -1819,8 +1820,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 
     -- Custom theme stuff
 
-    local CustomSettingsFile
-
     if not callSafely(isfile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension) then
         local Data = {}
         Data["Theme"] = Settings.Theme
@@ -1831,36 +1830,36 @@ function RayfieldLibrary:CreateWindow(Settings)
     	ThemeMode = string.lower(Settings.ConfigurationSaving.ThemeMode)
 	end
 
-    if ThemeMode ~= nil and ThemeMode ~= false then
-
-		CustomSettingsFile = callSafely(readfile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension)
-		local success, Data = pcall(function() return HttpService:JSONDecode(CustomSettingsFile) end)
-
-		if success then
-
-			--print(ThemeMode)
+	local CustomSettingsFile = callSafely(readfile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension)
+	local success, Data = pcall(function() return HttpService:JSONDecode(CustomSettingsFile) end)
+    
+	if success then
+		if ThemeMode ~= nil or ThemeMode ~= false then
 
 			if ThemeMode == "global" then
-
-				--print("Custom Theme", Data["Theme"])
 
 				Settings.Theme = Data["Theme"] or "Default"
 
 			elseif ThemeMode == "pconfig" and Data["AutoExecute"] then
 
 				local fileName = Data["AutoExecute"]
-
-				--print(ConfigurationFolder[fileName])
 				
 				Settings.Theme = ConfigurationFolder[fileName]["Theme"]
 			end
 		else
 			warn("CustomSettingsFile had an issue decoding theme")
 		end
+
+		if Data["AutoExecute"] then
+			if callSafely(isfile, ConfigurationFolder .. "/" .. Data["AutoExecute"] .. ConfigurationExtension) then
+				AutoExecuteFile = Data["AutoExecute"]
+			else
+				warn('Rayfield Configurations Error | ' .. Data["AutoExecute"] .. " | was not found in Configuration Folder")
+			end
+		end
     end
 
 	if Settings.Theme then
-		--print("Loading theme", Settings.Theme)
 		local success, result = pcall(ChangeTheme, Settings.Theme)
 		if not success then
 			local success, result2 = pcall(ChangeTheme, 'Default')
@@ -3922,7 +3921,7 @@ end
 function RayfieldLibrary:LoadConfiguration(configName)
 	local config
 
-    if MultiConfigs then
+    if configName then
         CFileName = configName
     end
 
@@ -3977,11 +3976,53 @@ function RayfieldLibrary:SaveConfiguration(configName)
 
 end
 
-function RayfieldLibrary:SetGlobalTheme(theme)
-	ensureFolder(RayfieldFolder)
+function RayfieldLibrary:SetAutoExecute(config)
+	
 	local Data = {}
+
+	local success, result = pcall(function()
+		if isfile then
+			if callSafely(isfile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension) then
+				local file = callSafely(readfile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension)
+				decoded, decodedFile = pcall(function() return HttpService:JSONDecode(file) end)
+				if decoded then
+					Data = decodedFile
+				end
+			end
+		else
+			RayfieldLibrary:Notify({Title = "Rayfield Configurations", Content = "We couldn't enable Configuration Saving as you are not using software with filesystem support.", Image = 4384402990})
+		end
+	end)
+
+	if success then
+		if config ~= nil and not callSafely(isfile, ConfigurationFolder .. "/" .. config .. ConfigurationExtension) then
+			warn('Rayfield Configurations Error | ' .. config .. " | was not found in Configuration Folder")
+			return
+		end
+
+		Data["AutoExecute"] = config
+		callSafely(writefile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension, tostring(HttpService:JSONEncode(Data)))
+	else
+		warn('Rayfield Custom Configurations Error | '..tostring(result))
+	end
+end
+
+function RayfieldLibrary:SetGlobalTheme(theme)
+
+	ensureFolder(RayfieldFolder)
+
+	local Data = {}
+
+	if callSafely(isfile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension) then
+		local file = callSafely(readfile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension)
+		local success, decodedFile = pcall(function() return HttpService:JSONDecode(file) end)
+		if success then
+			Data = decodedFile
+		end
+	end
+	
     Data["Theme"] = theme
-    CustomSettingsFile = callSafely(writefile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension, tostring(HttpService:JSONEncode(Data)))
+    callSafely(writefile, RayfieldFolder .. "/" .. "CustomSettings" .. ConfigurationExtension, tostring(HttpService:JSONEncode(Data)))
 end
 
 if CEnabled and Main:FindFirstChild('Notice') then
@@ -3997,10 +4038,24 @@ if CEnabled and Main:FindFirstChild('Notice') then
 end
 
 task.delay(4, function()
-    if not MultiConfigs then
-        if AutoLoadConfig then
-	        RayfieldLibrary.LoadConfiguration()
-        end
+    if AutoLoadConfig then
+		if AutoExecuteFile then
+			if isfile then
+				if callSafely(isfile, ConfigurationFolder .. "/" .. AutoExecuteFile .. ConfigurationExtension) then
+					local loaded
+					local Attempts = 0
+					local MaxAttempts = 10
+					repeat
+						Attempts += 1
+						loaded = LoadConfiguration(callSafely(readfile, ConfigurationFolder .. "/" .. AutoExecuteFile .. ConfigurationExtension))
+						task.wait(1)
+					until loaded == true or Attempts >= MaxAttempts
+				end
+			end
+
+		elseif not AutoExecuteFile and not MultiConfigs then
+			RayfieldLibrary.LoadConfiguration()
+		end
     end
 	if Main:FindFirstChild('Notice') and Main.Notice.Visible then
 		TweenService:Create(Main.Notice, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut), {Size = UDim2.new(0, 100, 0, 25), Position = UDim2.new(0.5, 0, 0, -100), BackgroundTransparency = 1}):Play()
@@ -4012,3 +4067,4 @@ task.delay(4, function()
 end)
 
 return RayfieldLibrary
+
